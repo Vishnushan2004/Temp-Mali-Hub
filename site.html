@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Free Temp Mail</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 30px; }
+    .email { font-size: 20px; font-weight: bold; color: green; }
+    .msg { border: 1px solid #ccc; margin: 10px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>🕶️ Your Temp Mail</h1>
+  <p class="email">Generating...</p>
+  <div id="inbox">📬 Checking inbox...</div>
+
+  <script>
+    let token = "";
+    let accountId = "";
+    let address = "";
+
+    async function createAccount() {
+      let rand = Math.random().toString(36).substring(2, 10);
+      let email = rand + "@mail.tm";
+      let password = rand + rand;
+
+      await fetch("https://api.mail.tm/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: email, password: password }),
+      });
+
+      let res = await fetch("https://api.mail.tm/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: email, password: password }),
+      });
+
+      let data = await res.json();
+      token = data.token;
+      address = email;
+      document.querySelector(".email").textContent = email;
+      checkInbox();
+    }
+
+    async function checkInbox() {
+      let res = await fetch("https://api.mail.tm/messages", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      let messages = await res.json();
+      let inboxDiv = document.getElementById("inbox");
+      inboxDiv.innerHTML = "";
+      if (messages["hydra:member"].length === 0) {
+        inboxDiv.innerHTML = "No messages yet. Try again in a minute.";
+      } else {
+        messages["hydra:member"].forEach((msg) => {
+          let div = document.createElement("div");
+          div.className = "msg";
+          div.innerHTML = `<b>From:</b> ${msg.from.address}<br><b>Subject:</b> ${msg.subject}`;
+          inboxDiv.appendChild(div);
+        });
+      }
+      setTimeout(checkInbox, 10000); // Refresh every 10 seconds
+    }
+
+    createAccount();
+  </script>
+</body>
+</html>
